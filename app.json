@@ -1,4 +1,8 @@
 {
   "name": "FaceDetectionApp",
-  "displayName": "FaceDetectionApp"
+  "displayName": "SkinSync AI",
+  "expo": {
+    "name": "SkinSync AI",
+    "slug": "skinsync-ai"
+  }
 }

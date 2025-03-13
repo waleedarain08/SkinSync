@@ -1,4 +1,60 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# SkinSync AI
+
+A React Native application that uses AI to analyze skin conditions and provide personalized skincare recommendations.
+
+## Features
+
+- Face detection and skin analysis
+- Personalized skincare recommendations
+- Treatment tracking
+- Appointment management
+- Progress monitoring
+- User profile management
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js
+- npm or yarn
+- React Native development environment
+- iOS Simulator (for Mac) or Android Studio (for Android development)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/skinsync-ai.git
+```
+
+2. Install dependencies:
+```bash
+cd skinsync-ai
+npm install
+```
+
+3. Start the development server:
+```bash
+npm start
+```
+
+4. Run on iOS:
+```bash
+npm run ios
+```
+
+5. Run on Android:
+```bash
+npm run android
+```
+
+## Contributing
+
+Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE.md file for details.
 
 # Getting Started
 
@@ -66,7 +122,7 @@ This is one way to run your app — you can also build it directly from Android 
 
 Now that you have successfully run the app, let's make changes!
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
 
 When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
 
