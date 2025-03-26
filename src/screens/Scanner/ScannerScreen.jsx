@@ -1,158 +1,134 @@
-import React, { useState, createRef, useEffect } from 'react';
-import { View, Button, StyleSheet, Text, Image ,TouchableOpacity} from 'react-native';
-import { Camera, useCameraDevice } from 'react-native-vision-camera';
-import * as tf from '@tensorflow/tfjs';
-import '@tensorflow/tfjs-react-native';
-import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
-import { requestPermission } from '../../utils/PermissionHelper';
-import { decodeJpeg } from '@tensorflow/tfjs-react-native';
-import * as FileSystem from 'react-native-fs';
+import { 
+  StyleSheet, 
+  Text, 
+  View 
+} from 'react-native'
+import { 
+  useEffect, 
+  useState,
+  useRef
+} from 'react'
+import {
+  Camera,
+  useCameraDevice,
+  useFrameProcessor
+} from 'react-native-vision-camera'
+import { 
+  Face,
+  runAsync,
+  useFaceDetector,
+  FaceDetectionOptions
+} from 'react-native-vision-camera-face-detector'
+import { Worklets } from 'react-native-worklets-core'
 
-const ScannerScreen = ({ navigation }) => {
-  const [photoUri, setPhotoUri] = useState(null);
-  const [isModelReady, setIsModelReady] = useState(false);
-  let cameraRef = createRef();
-  
-  useEffect(() => {
-    setupTensorFlow();
-    requestPermission();
-  }, []);
+export default function App() {
+  const [faces, setFaces] = useState([]); // Store detected faces
 
-  const setupTensorFlow = async () => {
-    try {
-      await tf.ready();
-      await tf.setBackend('webgl');
-      setIsModelReady(true);
-      console.log('TensorFlow.js is ready');
-    } catch (error) {
-      console.error('Failed to setup TensorFlow:', error);
-    }
-  };
-
-  const loadImage = async (uri) => {
-    try {
-      const response = await FileSystem.readFile(uri, 'base64');
-      const imageData = Buffer.from(response, 'base64');
-      const tensor = decodeJpeg(imageData);
-      return tensor;
-    } catch (error) {
-      console.error('Error loading image:', error);
-      throw error;
-    }
-  };
-
-  const handleCapture = async () => {
-    if (device) {
-      try {
-        const photo = await cameraRef.current.takePhoto({
-          qualityPrioritization: 'balanced',
-        });
-        detectFace(photo);
-      } catch (error) {
-        console.error('Failed to capture photo', error);
-      }
-    }
-  };
-
-  const detectFace = async (imageUri) => {  
-    if (!isModelReady) {
-      console.log('TensorFlow.js is not ready yet');
-      return;
-    }
-
-    try {
-      console.log('Detecting face...', imageUri);
-      
-      const model = await faceLandmarksDetection.load(
-        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh
-      );
-      console.log('Face detection model loaded');
-
-      const imageTensor = await loadImage(imageUri);
-      console.log('Image loaded as tensor');
-
-      const predictions = await model.estimateFaces({
-        input: imageTensor,
-      });
-
-      console.log('Detection complete:', predictions);
-      
-      tf.dispose(imageTensor);
-
-      if (predictions.length > 0) {
-        console.log('Detected faces:', predictions);
-      } else {
-        console.log('No faces detected');
-      }
-    } catch (error) {
-      console.error('Error in face detection:', error);
-    }
-  };
+  const faceDetectionOptions = useRef( {
+    //mode: FaceDetectionOptions.Mode.Accurate, // detection mode
+    landmarkMode: 'all', // landmark mode
+    classificationMode: 'all', // classification mode
+    performanceMode: 'normal', // performance mode
+    contourMode: 'all', // contour mode
+    // detection options
+  } ).current
 
   const device = useCameraDevice('front')
+  const { detectFaces } = useFaceDetector( faceDetectionOptions )
 
-  if (device == null) {
-    return <Text>Loading...</Text>;
-  }
+  useEffect(() => {
+    (async () => {
+      const status = await Camera.requestCameraPermission()
+      console.log({ status })
+    })()
+  }, [device])
+
+  const handleDetectedFaces = Worklets.createRunOnJS( (
+    faces
+  ) => { 
+    console.log( 'faces detected', faces )
+    setFaces(faces);
+  })
+
+  const frameProcessor = useFrameProcessor((frame) => {
+    'worklet'
+    //runAsync(frame, () => {
+      //'worklet'
+      const faces = detectFaces(frame)
+      // ... chain some asynchronous frame processor
+      // ... do something asynchronously with frame
+      handleDetectedFaces(faces)
+    //})
+    // ... chain frame processors
+    // ... do something with frame
+  }, [handleDetectedFaces])
+
+  const renderBoundingBoxes = () => {
+    return faces.map((face, index) => {
+      const { bounds } = face; // Get the bounds of each detected face
+      const { origin, size } = bounds;
+      const { x, y } = origin;
+      const { width, height } = size;
+
+      return (
+        <View
+          key={index}
+          style={[
+            styles.boundingBox,
+            {
+              left: x,
+              top: y,
+              width: width,
+              height: height,
+            },
+          ]}
+        />
+      );
+    });
+  };
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
+      {!!device? 
+      <View>
       <Camera
-        style={styles.camera}
+        style={StyleSheet.absoluteFill}
         device={device}
         isActive={true}
-        photo={true}
-        onError={(error) => {console.log('Camera error:', error)}}
-        ref={cameraRef}
+        frameProcessor={frameProcessor}
+        frameProcessorFps={5}
       />
-
-      <TouchableOpacity 
-        style={styles.captureButton}
-        onPress={handleCapture}
-      >
-        <Text style={styles.captureButtonText}>Capture Photo</Text>
-      </TouchableOpacity>
-
-      {photoUri && (
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: photoUri }} style={styles.image} />
-        </View>
-      )}
+       {renderBoundingBoxes()}
+      </View>
+       : <Text>
+        No Device
+      </Text>}
     </View>
-  );
-};
-
+  )
+}
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
   },
   camera: {
-    width: '100%',
-    height: '70%',
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    position: 'absolute', // Ensure camera is in the background
   },
-  imageContainer: {
+  boundingBox: {
     position: 'absolute',
-    bottom: 80,
-    right: 20,
-    borderWidth: 1,
-    borderColor: 'white',
-    padding: 5,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  image: {
-    width: 100,
-    height: 100,
-  },
-  captureButton: {
-    position: 'absolute',
-    bottom: 20,
-    backgroundColor: '#fff',
-    padding: 10,
+    borderWidth: 2,
+    borderColor: 'red',
     borderRadius: 5,
   },
+  text: {
+    position: 'absolute',
+    top: 50,
+    fontSize: 18,
+    color: 'white',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 5,
+  },
 });
-
-export default ScannerScreen; 

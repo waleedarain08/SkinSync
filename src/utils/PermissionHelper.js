@@ -1,21 +1,25 @@
-import { PermissionsAndroid } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import { useCallback } from 'react';
-const requestPermission =  async() => {
+
+export const requestPermission = async () => {
+  if (Platform.OS === 'android') {
     try {
-      const permissionGranted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
-        title: 'Allow camera access',
-        message:
-          'App wants to access your camera',
-        buttonNegative: 'Deny',
-        buttonPositive: 'Allow',
-      });
-      // then access permission status
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        console.log('Camera permission granted',permissionGranted);
-        // permissons have been accepted - update a useState() here or whatever your usecase is :)
-      }
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Camera Permission',
+          message: 'This app needs camera access to detect faces',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
     } catch (err) {
-      console.warn("DDFDF");
+      console.warn(err);
+      return false;
     }
-}
-  export { requestPermission };
+  } else {
+    return true; // iOS permissions are handled in Info.plist
+  }
+};
